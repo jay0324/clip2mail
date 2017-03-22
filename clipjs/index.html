@@ -1,0 +1,185 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+
+	<title>Export and save the canvas as PNG</title>
+
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=320; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+	
+	<script src="http://code.createjs.com/easeljs-0.5.0.min.js"></script> 
+	<script src="http://code.jquery.com/jquery-1.8.2.js"></script>
+	
+	<script src="libs/export_canvas/html2canvas.min.js" type="text/javascript"></script>
+	<script src="libs/export_canvas/base64.js" type="text/javascript"></script>
+	<script src="libs/export_canvas/canvas2image.js" type="text/javascript"></script>
+
+</head>
+
+<script type="text/javascript">
+	
+	var canvas;
+	var stage;
+
+	/**
+	 * Init 
+	 */
+	function init() {
+		
+		canvas = document.getElementById("canvas");
+		stage = new createjs.Stage(canvas);
+
+		// Enable touch support
+		if (createjs.Touch.isSupported()) { createjs.Touch.enable(stage); }
+
+		displayLabel();
+		displayMonalisa();
+		
+	}
+
+
+	/**
+	 * Display Label
+	 */
+	displayLabel = function () {
+
+		// Create a new Text object and a rectangle Shape object, and position them inside a container
+		var container = new createjs.Container();
+		container.x = 400;
+		container.y = 80;
+		container.rotation = 45;
+
+		var target = new createjs.Shape();
+		target.graphics.beginFill("#F00").drawRect(-10,-10,180,60).beginFill("#FFF");
+		container.addChild(target);
+
+		var txt = new createjs.Text("Monalisa", "36px Arial", "#FFF");
+		txt.textBaseline = "top";
+		container.addChild(txt);
+
+		stage.addChild(container);
+
+		// Enable drag'n'drop
+		enableDrag(container)
+
+	}
+
+	/**
+	 * Display Monalisa
+	 */
+	displayMonalisa = function () {
+
+		var image = new Image();
+		
+		// Invoked when the picture is loaded
+		image.onload = function (event) {
+
+			// Display Monalisa
+			var monalisa = new createjs.Bitmap(event.target) ;
+			stage.addChild(monalisa);
+			stage.update();
+			
+			// Enable drag'n'drop on Picture
+			enableDrag(monalisa)
+			
+		}
+		image.src = "images/mona.jpg" ;
+
+
+	}
+
+
+	/**
+     * Enable drag'n'drop on DisplayObjects
+     */
+	enableDrag = function (item) {
+
+		// OnPress event handler
+		item.onPress = function(evt) {
+
+			var offset = {	x:item.x-evt.stageX, 
+							y:item.y-evt.stageY};
+
+			// Bring to front
+			stage.addChild(item);
+
+			// Mouse Move event handler
+			evt.onMouseMove = function(ev) {
+				
+				item.x = ev.stageX+offset.x;
+				item.y = ev.stageY+offset.y;
+				stage.update();
+			}
+		}
+	}
+
+	/**
+     * Export and save the canvas as PNG 
+     */
+	function exportAndSaveCanvas()  {
+
+		// Get the canvas screenshot as PNG
+		var screenshot = Canvas2Image.saveAsPNG(canvas, true);
+
+		// This is a little trick to get the SRC attribute from the generated <img> screenshot
+		canvas.parentNode.appendChild(screenshot);
+		screenshot.id = "canvasimage";		
+		data = $('#canvasimage').attr('src');
+		canvas.parentNode.removeChild(screenshot);
+
+
+		// Send the screenshot to PHP to save it on the server
+		var url = 'upload/export.php';
+		$.ajax({ 
+		    type: "POST", 
+		    url: url,
+		    dataType: 'text',
+		    data: {
+		        base64data : data
+		    }
+		});
+
+
+
+	}
+
+	/**
+     * Export and display the canvas as PNG in a new wind	ow
+     */
+	function exportAndView()  {
+
+		var screenshot = Canvas2Image.saveAsPNG(canvas, true);
+		var win = window.open();
+		$(win.document.body).html(screenshot );
+	}
+
+
+	// capture screen
+	function captureScreen(){
+		html2canvas(document.body, {
+		  onrendered: function(canvas) {
+		    document.body.appendChild(canvas);
+		  }
+		});
+	}
+
+
+
+	
+</script>
+	
+<body onload="init()"  >
+
+	
+	<canvas  width="600" height="550" id="canvas"></canvas>
+	
+
+	<div  style="position: relative" >
+		<input type="button" value="Capture screen shot" onClick="captureScreen()" >
+		<input type="button" value="View screenshot in a new page" onClick="exportAndView()" >
+		<input type="button" value="Export and Upload Screenshot" onClick="exportAndSaveCanvas()" >
+	</div>
+	
+</body>
+</html>
